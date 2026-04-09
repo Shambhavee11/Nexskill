@@ -149,7 +149,7 @@ export function LoginPage() {
 /* ─── OTP PAGE ─────────────────────────────────────────────── */
 export function OTPPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { setUser } = useAuth();
   const location = require('react-router-dom').useLocation();
   const { userId, email } = location.state || {};
   const [otp, setOtp] = useState('');
@@ -164,10 +164,12 @@ export function OTPPage() {
     try {
       const res = await authAPI.verifyOTP({ userId, otp });
       const { accessToken, refreshToken, user } = res.data;
+
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
-      // Set user in context
-      window.location.href = '/dashboard';
+      setUser(user);
+
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid OTP');
     } finally {
@@ -180,7 +182,7 @@ export function OTPPage() {
       await authAPI.resendOTP(userId);
       setResent(true);
       setTimeout(() => setResent(false), 5000);
-    } catch {}
+    } catch { }
   };
 
   return (

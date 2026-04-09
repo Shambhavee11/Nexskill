@@ -1,7 +1,7 @@
 const { query } = require('../config/db');
 
 // ─── GET MY PROFILE ──────────────────────────────────────────
-const getMyProfile = async (req, res) => {
+const getMe = async (req, res) => {
   try {
     const result = await query(
       `SELECT u.id, u.full_name, u.email, u.bio, u.avatar_url, u.credit_balance,
@@ -30,7 +30,7 @@ const getMyProfile = async (req, res) => {
 };
 
 // ─── GET USER PROFILE BY ID ──────────────────────────────────
-const getUserProfile = async (req, res) => {
+const getUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -44,7 +44,7 @@ const getUserProfile = async (req, res) => {
               )) FILTER (WHERE us.id IS NOT NULL), '[]') AS skills,
               COALESCE(json_agg(DISTINCT jsonb_build_object(
                 'id', p.id, 'title', p.title, 'description', p.description,
-                'image_url', p.image_url, 'tags', p.tags
+'image_url', p.image_url, 'project_url', p.project_url, 'tags', p.tags
               )) FILTER (WHERE p.id IS NOT NULL), '[]') AS portfolio
        FROM users u
        LEFT JOIN user_skills us ON us.user_id = u.id
@@ -124,7 +124,7 @@ const addSkill = async (req, res) => {
 // ─── DELETE SKILL ─────────────────────────────────────────────
 const deleteSkill = async (req, res) => {
   try {
-    const { skillId } = req.params;
+    const { id } = req.params;
 
     const result = await query(
       'DELETE FROM user_skills WHERE id = $1 AND user_id = $2 RETURNING id',
@@ -203,6 +203,62 @@ const exploreCreators = async (req, res) => {
   }
 };
 
+const addPortfolioItem = async (req, res) => {
+  try {
+    const { title, description, image_url, project_url, tags } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ success: false, message: 'Title is required' });
+    }
+
+    const result = await query(
+      `INSERT INTO portfolio_items (user_id, title, description, image_url, project_url, tags)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [
+        req.user.id,
+        title,
+        description || null,
+        image_url || null,
+        project_url || null,
+        tags || [],
+      ]
+    );
+
+    res.status(201).json({ success: true, item: result.rows[0] });
+  } catch (error) {
+    console.error('addPortfolioItem error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const deletePortfolioItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await query(
+      `DELETE FROM portfolio_items
+       WHERE id = $1 AND user_id = $2
+       RETURNING *`,
+      [id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Portfolio item not found or not yours',
+      });
+    }
+
+    res.json({ success: true, message: 'Portfolio item deleted successfully' });
+  } catch (error) {
+    console.error('deletePortfolioItem error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+
+
 // ─── GET CREDIT TRANSACTIONS ──────────────────────────────────
 const getCreditHistory = async (req, res) => {
   try {
@@ -244,6 +300,13 @@ const getCreditHistory = async (req, res) => {
 };
 
 module.exports = {
-  getMyProfile, getUserProfile, updateProfile,
-  addSkill, deleteSkill, exploreCreators, getCreditHistory
+  getMe,
+updateProfile,
+getUser,
+addSkill,
+deleteSkill,
+addPortfolioItem,
+deletePortfolioItem,
+getCreditHistory,
+exploreCreators
 };

@@ -4,13 +4,17 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // Attach access token to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
@@ -19,21 +23,35 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && error.response?.data?.code === 'TOKEN_EXPIRED' && !originalRequest._retry) {
+
+    if (
+      error.response?.status === 401 &&
+      error.response?.data?.code === 'TOKEN_EXPIRED' &&
+      !originalRequest?._retry
+    ) {
       originalRequest._retry = true;
+
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(`${API_BASE}/auth/refresh-token`, { refreshToken });
+
+        const response = await axios.post(`${API_BASE}/auth/refresh-token`, {
+          refreshToken,
+        });
+
         const { accessToken, refreshToken: newRefresh } = response.data;
+
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', newRefresh);
+
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
-      } catch {
+      } catch (refreshError) {
         localStorage.clear();
         window.location.href = '/login';
+        return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );
@@ -57,6 +75,8 @@ export const usersAPI = {
   addSkill: (data) => api.post('/users/me/skills', data),
   deleteSkill: (skillId) => api.delete(`/users/me/skills/${skillId}`),
   getCreditHistory: () => api.get('/users/me/credits'),
+  addPortfolioItem: (data) => api.post('/users/me/portfolio', data),
+  deletePortfolioItem: (id) => api.delete(`/users/me/portfolio/${id}`),
 };
 
 // ─── REQUESTS ─────────────────────────────────────────────────
@@ -68,13 +88,28 @@ export const requestsAPI = {
   review: (requestId, data) => api.post(`/requests/${requestId}/review`, data),
 };
 
-// ─── MESSAGES ─────────────────────────────────────────────────
+// ─── MESSAGES / CHAT ──────────────────────────────────────────
 export const messagesAPI = {
-  getConversations: () => api.get('/conversations'),
-  getMessages: (userId, page) => api.get(`/messages/${userId}`, { params: { page } }),
+  startConversation: (userId) =>
+    api.post('/chat/conversations', { participantId: userId }),
+
+  getConversations: () =>
+    api.get('/chat/conversations'),
+
+  getMessages: (conversationId) =>
+    api.get(`/chat/conversations/${conversationId}/messages`),
+
+  sendMessage: (conversationId, data) =>
+    api.post(`/chat/conversations/${conversationId}/messages`, data),
+
+  createOrGetConversation: (participantId) =>
+    api.post('/chat/conversations', { participantId }),
 };
 
-// ─── NOTIFICATIONS ─────────────────────────────────────────────
+// Optional alias if some files still import chatAPI
+export const chatAPI = messagesAPI;
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────
 export const notificationsAPI = {
   getAll: () => api.get('/notifications'),
 };

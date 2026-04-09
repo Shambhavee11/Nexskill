@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 let socket;
 
 export default function ChatPage() {
-  const { userId: chatWithId } = useParams();
+  const { conversationId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -58,17 +58,19 @@ export default function ChatPage() {
   }, []);
 
   // Load conversations
-  useEffect(() => {
-    messagesAPI.getConversations()
-      .then(res => {
-        setConversations(res.data.conversations || []);
-        if (chatWithId) {
-          const conv = res.data.conversations?.find(c => c.other_user_id === chatWithId);
-          if (conv) setActiveConv(conv);
-        }
-      }).catch(() => {});
-  }, [chatWithId]);
+ useEffect(() => {
+  messagesAPI.getConversations()
+    .then(res => {
+      const convs = res.data.conversations || [];
+      setConversations(convs);
 
+      if (conversationId) {
+        const conv = convs.find(c => String(c.id) === String(conversationId));
+        if (conv) setActiveConv(conv);
+      }
+    })
+    .catch(() => {});
+}, [conversationId]);
   // Load messages when active conv changes
   useEffect(() => {
     if (activeConv) {

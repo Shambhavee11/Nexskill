@@ -150,6 +150,7 @@ app.use('/api/auth/', authLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/requests', requestsRoutes);
+app.use('/api/chat', require('./routes/chat'));
 
 // Chat messages REST endpoint
 app.get('/api/messages/:userId', require('./middleware/auth').authenticateToken, async (req, res) => {

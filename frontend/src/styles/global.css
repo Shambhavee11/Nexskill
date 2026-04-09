@@ -196,3 +196,27 @@ a { text-decoration: none; color: inherit; }
 ::-webkit-scrollbar-track { background: var(--bg-card); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* Dark theme for all select inputs */
+select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid rgba(99,102,241,0.3);
+  outline: none;
+  appearance: none; /* removes default arrow (optional) */
+}
+
+/* Hover + focus */
+select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.2);
+}
+
+/* Dropdown options */
+select option {
+  background: #020617;
+  color: #e2e8f0;
+}

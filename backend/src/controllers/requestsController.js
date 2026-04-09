@@ -1,5 +1,6 @@
 const { query, getClient } = require('../config/db');
-
+const { getRecommendations}= require('../services/recommendationService');
+ 
 // ─── CREATE REQUEST ──────────────────────────────────────────
 const createRequest = async (req, res) => {
   try {
@@ -8,37 +9,64 @@ const createRequest = async (req, res) => {
     if (!skill_required || !title || !description || !credit_amount) {
       return res.status(400).json({ success: false, message: 'All required fields must be filled' });
     }
+
     if (credit_amount <= 0) {
       return res.status(400).json({ success: false, message: 'Credit amount must be positive' });
     }
 
-    // Check requester has enough credits
-    const userResult = await query('SELECT credit_balance FROM users WHERE id = $1', [req.user.id]);
+    const userResult = await query(
+      'SELECT credit_balance FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
     if (userResult.rows[0].credit_balance < credit_amount) {
       return res.status(400).json({ success: false, message: 'Insufficient credits' });
     }
 
     const result = await query(
-      `INSERT INTO service_requests (requester_id, provider_id, skill_required, title, description, credit_amount, deadline)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [req.user.id, provider_id || null, skill_required, title, description, credit_amount, deadline || null]
+      `INSERT INTO service_requests
+       (requester_id, provider_id, skill_required, title, description, credit_amount, deadline)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        req.user.id,
+        provider_id || null,
+        skill_required,
+        title,
+        description,
+        credit_amount,
+        deadline || null
+      ]
     );
 
-    // Notify provider if specified
     if (provider_id) {
       await query(
-        `INSERT INTO notifications (user_id, type, title, message, reference_id, reference_type)
+        `INSERT INTO notifications
+         (user_id, type, title, message, reference_id, reference_type)
          VALUES ($1, 'new_request', 'New Service Request', $2, $3, 'request')`,
         [provider_id, `Someone requested your "${skill_required}" service`, result.rows[0].id]
       );
     }
 
-    res.status(201).json({ success: true, request: result.rows[0] });
+    const recommendations = await getRecommendations(
+      req.user.id,
+      6,
+      skill_required,
+      provider_id ? [provider_id, req.user.id] : [req.user.id]
+    );
+
+    return res.status(201).json({
+      success: true,
+      request: result.rows[0],
+      recommendations
+    });
+
   } catch (error) {
     console.error('createRequest error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+   
 
 // ─── GET MY REQUESTS ─────────────────────────────────────────
 const getMyRequests = async (req, res) => {
