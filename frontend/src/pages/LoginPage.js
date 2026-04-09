@@ -1,0 +1,1 @@
+export { LoginPage as default } from './frontend/src/pages/AuthPages';
