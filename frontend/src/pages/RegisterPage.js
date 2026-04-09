@@ -1,7 +1,2 @@
-import React from 'react';
-
-function RegisterPage() {
-  return <div>Register Page</div>;
-}
-
+import { RegisterPage } from './AuthPages';
 export default RegisterPage;
