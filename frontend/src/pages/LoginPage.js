@@ -1,1 +1,7 @@
-export { LoginPage as default } from './frontend/src/pages/AuthPages';
+import React from 'react';
+
+function LoginPage() {
+  return <div>Login Page</div>;
+}
+
+export default LoginPage;
